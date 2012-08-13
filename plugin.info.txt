@@ -1,0 +1,7 @@
+base   aurelia
+author Dietrich Wittenberg
+email  dietrich.wittenberg@online.de
+date   2012-07-01
+name   aurelia plugin
+desc   Functions to AUtomatic create RElative a LInk and Access it 
+url    http://dokuwiki.org/plugin:dwaurelia
