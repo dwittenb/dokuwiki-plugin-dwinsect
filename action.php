@@ -23,7 +23,7 @@ class action_plugin_dwinsect extends DokuWiki_Action_Plugin {
       'date'   => '2012-07-01',
       'name'   => 'plugin dwinsect',
       'desc'   => 'Includes a button with syntax of dwinsect',
-      'url'    => 'http://www.wwwittenberg.de',
+      'url'    => 'http://dokuwiki.org/plugin:dwinsect',
     );
   }
   
