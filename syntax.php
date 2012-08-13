@@ -167,7 +167,7 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
       'email'  => 'info.wittenberg@online.de',
       'date'   => '2012-07-01',
       'name'   => 'plugin dwinsect',
-      'desc'   => 'Includes a section or the first link in the section. The link can be interpreted',
+      'desc'   => 'INcludes a SECtion or the first link in the section. The link can be interpreted',
       'url'    => 'http://www.wwwittenberg.de',
     );
   }
