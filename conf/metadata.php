@@ -3,7 +3,7 @@
 	* Metadata for configuration manager plugin
 	* Additions for the dwinsect plugin
 	*
-	* @author     Dietrich Wittenberg <dietrich.wittenberg@online.de>
+	* @author     Dietrich Wittenberg <info.wittenberg@online.de>
 	*/
 
 	$meta['linklistname']		= array('string');
