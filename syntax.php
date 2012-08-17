@@ -161,7 +161,8 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
 	function syntax_plugin_dwinsect() {
 	}
 		
-  function getInfo(){
+/* not longer needed for DokuWiki 2009-12-25 “Lemming” and later
+	function getInfo(){
     return array(
       'author' => 'Dietrich Wittenberg',
       'email'  => 'info.wittenberg@online.de',
@@ -171,7 +172,7 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
       'url'    => 'http://dokuwiki.org/plugin:dwinsect',
     );
   }
-				
+*/				
   function getType(){ return 'substition'; }
 	function getAllowedTypes() { return array('disabled'); }	// 'formatting', 'substition',    
   function getPType(){ return 'normal'; }

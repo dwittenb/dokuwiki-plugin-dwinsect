@@ -3,5 +3,5 @@ author Dietrich Wittenberg
 email  info.wittenberg@online.de
 date   2012-07-01
 name   dwinsect plugin
-desc   Functions to INclude a SECTion 
+desc   Functions to INclude a SECTion or Link in the Section. Adds a toolbar-button to editor.
 url    http://dokuwiki.org/plugin:dwinsect
