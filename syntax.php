@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This plugin allows to insert a section of a page
  * The section can be shown in different ways:
@@ -18,18 +19,16 @@
 if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../').'/');
 if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 require_once(DOKU_PLUGIN.'syntax.php');
+require_once (DWTOOLS.'lib.php');
 
 function _getFN($ns, $file){
 
 	// check for wiki page = $ns:$file (or $file where no namespace)
 	$nsFile = ($ns) ? "$ns:$file" : $file;
 	if (@file_exists(wikiFN($nsFile)) && auth_quickaclcheck($nsFile)) return $nsFile;
-
-	// remove deepest namespace level and call function recursively
-
 	// no namespace left, exit with no file found
 	if (!$ns) return '';
-
+	// remove deepest namespace level and call function recursively
 	$i = strrpos($ns, ":");
 	$ns = ($i) ? substr($ns, 0, $i) : false;
 	return _getFN($ns, $file);
@@ -38,7 +37,6 @@ function _getFN($ns, $file){
 // defaults to the root linkfile: links
 function _get_linkfile($file_ns, $file) {
 	global $ID;
-	
 	// discover file containing the links
 	$file_ns = ($file_ns == "") ? getNS($ID) : $file_ns;
 	$linksfile = _getFN($file_ns, $file);
@@ -47,75 +45,15 @@ function _get_linkfile($file_ns, $file) {
 }
 
 /**
- * find first wikilink inside a string and return the link an type of link
- * 
- * @param string $section
- * @return multitype:unknown |boolean
- */
-function _check_link($section) {
-	$ltrs = '\w';
-	$gunk = '/\#~:.?+=&%@!\-\[\]';
-	$punc = '.:?\-;,';
-	$host = $ltrs.$punc;
-	$any  = $ltrs.$gunk.$punc;
-	
-	// wikilink
-	$patterns['internallink'][] 		= '#\[\[(?:(?:[^[\]]*?\[.*?\])|.*?)\]\]#s';
-	// externallink
-	$schemes = getSchemes();
-	foreach ( $schemes as $scheme ) {
-		$patterns['externallink'][] 	= '#\b(?i)'.$scheme.'(?-i)://['.$any.']+?(?=['.$punc.']*[^'.$any.'])#s';
-	}
-	$patterns['externallink'][]			= '#\b(?i)www?(?-i)\.['.$host.']+?\.['.$host.']+?['.$any.']+?(?=['.$punc.']*[^'.$any.'])#s';
-	$patterns['externallink'][] 		= '#\b(?i)ftp?(?-i)\.['.$host.']+?\.['.$host.']+?['.$any.']+?(?=['.$punc.']*[^'.$any.'])#s';
-	
-	// filelink
-	$patterns['filelink'][] 				= '#\b(?i)file(?-i)://['.$any.']+?['.$punc.']*[^'.$any.']#s';
-	// windows sharelink
-	$patterns['windowssharelink'][] = '#\\\\\\\\\w+?(?:\\\\[\w$]+)+#s';
-	// wiki medialink
-	//$patterns['internalmedia'][] 		= '#\{\{[^\}]+\}\}#s';
-	$patterns['media'][] 						= '#\{\{[^\}]+\}\}#s';
-	//$this->patterns[] = '#(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?#s?'; // externallink
-	// E-Mail
-	$patterns['emaillink'][] 				= '#([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})#s';
-		
-	foreach ($patterns as $type => $subpatterns) {
-		foreach ($subpatterns as $pattern) {
-			if (preg_match($pattern, $section, $result)) {
-					return array($type, $result[0]);
-			}
-		}
-	}
-	return false;
-}
-
-/**
- * split a string by a speciel string
+ * split a string by a special string
  *  
  * @param string $section
  * @param string $link
  * @return array(string, string) 
  */
-function _check_text($section, $link) {
-	return (explode($link, $section, 2));
-/*
-	$pattern='#(.*)'.preg_quote($link).'(.*)#s';
-	preg_match($pattern, $section, $result);
-	return array($result[1], $result[2]);
-*/
-}
-
-/**
- * Strips the heading <p> and trailing </p> added by p_render xhtml to acheive inline behavior
- * 
- * @param string $data
- * @return strin $data
- */
-function _stripp($data) {
-	$data = preg_replace('`^\s*<p[^>]*>\s*`', '', $data);
-	$data = preg_replace('`\s*</p[^>]*>\s*$`', '', $data);
-	return $data;
+function _split_text($section, $link) {
+  $ret=explode($link, trim($section), 2);
+  return $ret;
 }
 
 // change params of link depending on type
@@ -145,17 +83,6 @@ function _check_translate($type, $link, $params) {
 	return (array($type, $link));
 }
 
-function _get_calls(&$handler, $type, $link, $state, $pos) {
-	//----- save calls-array
-	$save_calls=$handler->calls;
-	$handler->calls=array();
-	$handler->$type($link, $state, $pos);
-	$calls=$handler->calls;
-	//----- restore calls-array
-	$handler->calls=$save_calls;
-	return $calls[0];
-}
-
 class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
 
 	function syntax_plugin_dwinsect() {
@@ -180,7 +107,7 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
   	
 		
 	function connectTo($mode) {
-		$pattern='\[\*\([^\)]*\)]';	// [[&sectionname|parameter]]
+		$pattern='\[\*\(.*?(?=\)\])\)\]';	// [*(.....)]
 		$this->Lexer->addSpecialPattern($pattern, $mode, 'plugin_dwinsect' );
 	}
 
@@ -199,40 +126,82 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
       	break;
 
       case DOKU_LEXER_SPECIAL:
-	  		// syntax: [*(ns:file#anchor|params)]
-	      $pattern='/\[\*\((?:(.*?)#)?([^|\)]*)[|]?(.*)\)]/';
+      	//         >match_all                                       <
+	  		// syntax:  [ * (   ns:file#anchor          |     params  )]
+	      $pattern='/\[\*\('.'(?:(.*?)#)?([^|\)]*)'.'[|]?'.'(.*)'.'\)]/';
 	      preg_match($pattern, $match, $subjects);
-	      list($match, $ns_file, $anchor, $params)=$subjects;
+	      list($match_all, $ns_file, $anchor, $params)=$subjects;
 	      
-	      // load nearest pagefile
+	      // load nearest pagefile to wikitext
 	      $this->wikitext=_get_linkfile($ns_file, $this->getConf('linklistname'));
-	       
-				list($anchor, $anchor_params) = $this->_get_params($anchor); 				// $anchor_params => array(param1 => val1, param2 => val2, ...)
-	      
-	      $pattern='#(={2,}+[ ]*'.preg_quote(trim($anchor)).'[ ]*={2,}+\s*)(.*?)((?=={2,}+)|.$)#s';
+
+	      // anchor: anchor_name?param1=val1&param2=val2 ...
+				// $anchor_params => array(param1 => val1, param2 => val2, ...)
+				list($anchor_name, $anchor_params) = $this->_get_params($anchor); 	
+
+				//         (            section[0]                                                    )
+				//         (            section[1]                                   )(  section[2]   )
+				//         (===         anchor_name                               ===)(text1 url text2)      ==== | $end
+	      $pattern='#(={2,}+[ ]*'.preg_quote(trim($anchor_name)).'[ ]*={2,}+\s*)(.*?)'           .'(?=={2,}+|$)#s';
 	      if (preg_match($pattern, $this->wikitext, $section)) {							
+
 	      	// found section-name matching $anchor !!! trim spaces from anchor
-	      	list($type,  $link)		= _check_link($section[2]);									// find link in section:       						link
-					list($text1, $text2)	= _check_text($section[2], $link);					// find text in section: 						text1 link text2
-					
-					switch ($anchor_params['link']) {
-						case 'translate':																								// translate link depending on type:			link'
-							list($type,  $link)		=	_check_translate($type, $link, $params);	
+	      	list($link_type, $link)		= _get_firstlink($section[2]);						// find link in section[2]:						link
+	      	list($text1, $text2)			= _split_text($section[2], $link);		// split text1, text2 by link:	text1 link text2
+	      	
+	      	switch ($anchor_params['link']) {
+						case "translate":
+							// translate link depending on type:			link'
+							list($link_type,  $link)	=	_check_translate($link_type, $link, $params);
 							break;
-						default: break;																									// do nothing, no change to link:				link
+						case "none":	
+							$link = "";	
+							break;
+						case "plane":	
+						default:
+							break;
 					}
-					$call = _get_calls($handler, $type, $link, $state, $pos);					// get call-array from core: 		array(calltype, array(args))
-					return array($state, array($anchor, $call, $text1, $text2, $anchor_params, $section[0]));
-	
+					
+					switch ($anchor_params['text']) {
+						case "footnote": 
+							$text1 =	($text1) ? "((".$text1."))" : "";
+							$text2 =	($text2) ? "((".$text2."))" : "";
+							break;
+						case "none":
+							$text1 = "";
+							$text2 = "";
+							break;
+						case "plain":
+						default:
+							break;
+     			}
+					
+					switch ($anchor_params['include']) {
+						case "plain":	
+							$wiki	=	$section[0];	
+							break;
+						case "link":	
+							$wiki	=	$text1.$link.$text2;	
+							break;
+						case "none":	
+						default:
+							$wiki = "";
+							break;
+					}
+					$instructions=p_get_instructions($wiki);
+					array_shift($instructions);	//remove document open
+					array_shift($instructions);	//remove paragraph open
+					array_pop($instructions);		//remove document close
+					array_pop($instructions);		//remove paragraph close
+					return array($state, array($instructions, false));
 	      } else {
-	      	// not found section-name matching $anchor
-	      	return array($state, array($anchor.(($params) ? "|".$params : ""), array('noanchor')));
+	      	$wiki=$anchor_name.(($params) ? "|".$params : "");	// not found section-name matching: anchor_name|anchor_params
+	      	return array($state, array($wiki, true));
 	      }
       	break;
 		}
     return array();
 	}
- 
 
   /**
    * Create output
@@ -240,7 +209,7 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
 	function render($mode, &$renderer, $data) {
 
 		if($mode == 'xhtml'){
-			list($state, $match) = $data;
+			list($state, $result) = $data;
       switch ($state) {
       	case DOKU_LEXER_ENTER:
       	case DOKU_LEXER_MATCHED:
@@ -250,25 +219,12 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
       		break;
       		
       	case DOKU_LEXER_SPECIAL:
-      		// defined: $anchor, $call; optional: $text1, $text2, $anchor_params, $section
-     			list($anchor, $call, $text1, $text2, $anchor_params, $section) = $match;
-     			list($hndl, $args, $pos) = $call;
-     			
-     			// render the link as an syntax-error
-     			if ($hndl == "noanchor") {	
-     				$renderer->internallink("*(".$anchor.")");
-     				return true;
-     			}
-
-     			switch ($anchor_params['include']) {
-     				case'link':
-		     			$this->_render_text($renderer, $text1, $anchor_params['text']);	// render the info-text
-		     			$this->_render_link($renderer, $hndl, $args);										// render the link
-		     			$this->_render_text($renderer, $text2, $anchor_params['text']);	// render second text
-		     			break; // 'include link
-     				case 'plain':
-     					$renderer->doc.=p_render('xhtml',p_get_instructions($section),$info);
-		     			break;
+     			list($instructions, $error) = $result;
+     			if ($error === true) {																			// render the link as an syntax-error	
+     				$renderer->internallink("[*(".$instructions.")]");					// instructions contains the error-text
+     			} else {
+     				//$renderer->doc.=p_render('xhtml', $instructions, $info);	// instruction contains an array of instructions
+     				$renderer->nest($instructions);
      			}
      			break;
       }
@@ -277,13 +233,16 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
     return false;
 	}
 
-// private functions
+// private class functions
 	function _get_params($anchor) {
-		// init defaults
+	  // anchor: "anchorname?param1=val1&param2=val2 ..."
+		// init defaults to valid params
 		$anchor_params['text']		= $this->getConf('insecttext'); 		// "footnote"; 
 		$anchor_params['link']		= $this->getConf('insectlink'); 		// "translate"; 
-		$anchor_params['include']	= $this->getConf('insectinclude');	// "link";	  
-		list($anchor, $params) = preg_split('/[\?]/', $anchor, 2);
+		$anchor_params['include']	= $this->getConf('insectinclude');	// "link";
+		// split anchor_name from params	  
+		list($anchor_name, $params) = preg_split('/[\?]/', $anchor, 2);
+		// split params into anchor_params
 		if ($params) {
 			$a=explode("&", $params);
 			foreach ($a as $p) {
@@ -291,7 +250,7 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
 				$anchor_params[$key]=$val;
 			}
 		}
-		return array($anchor, $anchor_params);
+		return array($anchor_name, $anchor_params);
 	}
 
 	function _render_text(&$renderer, $text, $flag) {
