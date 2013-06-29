@@ -5,7 +5,7 @@
  * The section can be shown in different ways:
  * 1. The section is shown as it is like a simple include
  * 2. The first link in the section is shown (direct or with the parameters used)
- * 3. The text before an after the link is shown as a footnote or plain text
+ * 3. The text before an after the link is shown as a footnote or plain text or not
  * It can be used to reference one link or text on multiple pages 
  * It is usefull to reference to one links that are often updatet
  *   
@@ -87,7 +87,7 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
 
 	function syntax_plugin_dwinsect() {
 	}
-		
+
 /* not longer needed for DokuWiki 2009-12-25 “Lemming” and later
 	function getInfo(){
     return array(
@@ -104,8 +104,8 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
 	function getAllowedTypes() { return array('disabled'); }	// 'formatting', 'substition',    
   function getPType(){ return 'normal'; }
   function getSort(){ return 199; }
-  	
-		
+
+  
 	function connectTo($mode) {
 		$pattern='\[\*\(.*?(?=\)\])\)\]';	// [*(.....)]
 		$this->Lexer->addSpecialPattern($pattern, $mode, 'plugin_dwinsect' );
@@ -126,8 +126,8 @@ class syntax_plugin_dwinsect extends DokuWiki_Syntax_Plugin {
       	break;
 
       case DOKU_LEXER_SPECIAL:
-      	//         >match_all                                       <
-	  		// syntax:  [ * (   ns:file#anchor          |     params  )]
+      	//match_all:[ * ( ...                                ...  )]
+	  		//syntax   :[ * (   ns:file#anchor          |     params  )]
 	      $pattern='/\[\*\('.'(?:(.*?)#)?([^|\)]*)'.'[|]?'.'(.*)'.'\)]/';
 	      preg_match($pattern, $match, $subjects);
 	      list($match_all, $ns_file, $anchor, $params)=$subjects;
